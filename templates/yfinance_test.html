@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>yfinance接口测试工具</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #181c24; color: #e4e7eb; font-family: 'Segoe UI',sans-serif; }
+        .card { background: #232a36; color: #e4e7eb; margin-bottom: 16px; border: 1px solid #2d3748; }
+        .card-header { background: #2d3748; border-bottom: 1px solid #4a5568; }
+        .form-label { color: #00d4aa; font-weight: bold; }
+        .result-json { background: #222; color: #aaffcc; font-size: 12px; border-radius: 6px; padding: 12px; overflow-x: auto; max-height: 300px; }
+        .table-dark th, .table-dark td { color: #e4e7eb; font-size: 12px; }
+        .btn-test { background: #00d4aa; border: none; color: #1a202c; font-weight: bold; }
+        .btn-test:hover { background: #00b894; }
+        .btn-test:disabled { background: #4a5568; color: #a0aec0; }
+        .method-description { color: #a0aec0; font-size: 12px; margin-top: 4px; }
+        .loading { color: #fbbf24; }
+        .error { color: #f56565; }
+        .success { color: #48bb78; }
+        .param-group { background: #1a202c; padding: 8px; border-radius: 4px; margin-bottom: 8px; }
+        .param-label { color: #a0aec0; font-size: 11px; margin-bottom: 2px; }
+        .param-input { background: #2d3748; border: 1px solid #4a5568; color: #e4e7eb; font-size: 12px; }
+        .param-input:focus { background: #2d3748; border-color: #00d4aa; color: #e4e7eb; box-shadow: none; }
+        .param-row { display: flex; gap: 8px; align-items: end; }
+        .param-col { flex: 1; }
+        .checkbox-wrapper { display: flex; align-items: center; gap: 4px; }
+        .form-check-input { background-color: #2d3748; border-color: #4a5568; }
+        .form-check-input:checked { background-color: #00d4aa; border-color: #00d4aa; }
+        .data-analysis { background: #1a202c; padding: 12px; border-radius: 6px; margin-top: 8px; }
+        .analysis-title { color: #00d4aa; font-weight: bold; margin-bottom: 8px; }
+        .analysis-item { margin-bottom: 6px; font-size: 12px; }
+        .analysis-label { color: #a0aec0; }
+        .analysis-value { color: #e4e7eb; font-weight: bold; }
+        .data-preview { max-height: 200px; overflow-y: auto; }
+        .export-btn { background: #3182ce; border: none; color: white; font-size: 11px; padding: 4px 8px; }
+        .export-btn:hover { background: #2c5aa0; }
+        .field-info { color: #a0aec0; font-size: 11px; margin-top: 4px; }
+        .numeric-cell { text-align: right; }
+        .date-cell { color: #fbbf24; }
+        .positive { color: #48bb78; }
+        .negative { color: #f56565; }
+        .tab-content { background: #1a202c; border-radius: 4px; padding: 8px; }
+        .nav-tabs .nav-link { color: #a0aec0; background: #2d3748; border: 1px solid #4a5568; }
+        .nav-tabs .nav-link.active { color: #00d4aa; background: #1a202c; border-color: #00d4aa; }
+    </style>
+</head>
+<body>
+<div class="container-fluid py-4">
+    <h2 class="mb-4" style="color:#00d4aa;">yfinance接口测试工具</h2>
+    
+    <!-- 全局参数设置 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <label class="form-label">股票/指数代码</label>
+            <input id="symbol" class="form-control" placeholder="如AAPL、^GSPC、MSFT" value="AAPL">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">操作</label>
+            <div>
+                <button class="btn btn-test me-2" onclick="testAllYF()">一键测试所有</button>
+                <button class="btn btn-secondary" onclick="clearAllResults()">清空结果</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 接口测试区域 -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">📈 历史数据</h5>
+                    <div class="method-description">获取股票历史价格数据</div>
+                </div>
+                <div class="card-body">
+                    <div class="param-group">
+                        <div class="param-row">
+                            <div class="param-col">
+                                <div class="param-label">周期 (period)</div>
+                                <select id="history_period" class="form-control param-input">
+                                    <option value="1d">1d</option>
+                                    <option value="5d">5d</option>
+                                    <option value="1mo">1mo</option>
+                                    <option value="3mo">3mo</option>
+                                    <option value="6mo">6mo</option>
+                                    <option value="1y" selected>1y</option>
+                                    <option value="2y">2y</option>
+                                    <option value="5y">5y</option>
+                                    <option value="10y">10y</option>
+                                    <option value="ytd">ytd</option>
+                                    <option value="max">max</option>
+                                </select>
+                            </div>
+                            <div class="param-col">
+                                <div class="param-label">间隔 (interval)</div>
+                                <select id="history_interval" class="form-control param-input">
+                                    <option value="1m">1m</option>
+                                    <option value="2m">2m</option>
+                                    <option value="5m">5m</option>
+                                    <option value="15m">15m</option>
+                                    <option value="30m">30m</option>
+                                    <option value="60m">60m</option>
+                                    <option value="90m">90m</option>
+                                    <option value="1h">1h</option>
+                                    <option value="1d" selected>1d</option>
+                                    <option value="5d">5d</option>
+                                    <option value="1wk">1wk</option>
+                                    <option value="1mo">1mo</option>
+                                    <option value="3mo">3mo</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="param-row mt-2">
+                            <div class="param-col">
+                                <div class="param-label">开始日期 (start)</div>
+                                <input id="history_start" type="date" class="form-control param-input">
+                            </div>
+                            <div class="param-col">
+                                <div class="param-label">结束日期 (end)</div>
+                                <input id="history_end" type="date" class="form-control param-input">
+                            </div>
+                        </div>
+                        <div class="param-row mt-2">
+                            <div class="checkbox-wrapper">
+                                <input type="checkbox" id="history_prepost" class="form-check-input">
+                                <label class="param-label mb-0">包含盘前盘后 (prepost)</label>
+                            </div>
+                            <div class="checkbox-wrapper">
+                                <input type="checkbox" id="history_actions" class="form-check-input" checked>
+                                <label class="param-label mb-0">包含公司行为 (actions)</label>
+                            </div>
+                            <div class="checkbox-wrapper">
+                                <input type="checkbox" id="history_auto_adjust" class="form-check-input" checked>
+                                <label class="param-label mb-0">自动调整 (auto_adjust)</label>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-test btn-sm" onclick="testMethod('history')">测试 history</button>
+                    <div id="yf_history_result" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">ℹ️ 基本信息</h5>
+                    <div class="method-description">获取股票基本信息</div>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-test btn-sm" onclick="testMethod('info')">测试 info</button>
+                    <div id="yf_info_result" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">📊 公司行为</h5>
+                    <div class="method-description">股票分割、股息等公司行为</div>
+                </div>
+                <div class="card-body">
+                    <div class="param-group">
+                        <div class="param-row">
+                            <div class="param-col">
+                                <div class="param-label">开始日期 (start)</div>
+                                <input id="actions_start" type="date" class="form-control param-input">
+                            </div>
+                            <div class="param-col">
+                                <div class="param-label">结束日期 (end)</div>
+                                <input id="actions_end" type="date" class="form-control param-input">
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-test btn-sm me-2" onclick="testMethod('actions')">测试 actions</button>
+                    <button class="btn btn-test btn-sm me-2" onclick="testMethod('dividends')">测试 dividends</button>
+                    <button class="btn btn-test btn-sm" onclick="testMethod('splits')">测试 splits</button>
+                    <div id="yf_actions_result" class="mt-2"></div>
+                    <div id="yf_dividends_result" class="mt-2"></div>
+                    <div id="yf_splits_result" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">💰 财务数据</h5>
+                    <div class="method-description">财务报表数据</div>
+                </div>
+                <div class="card-body">
+                    <div class="param-group">
+                        <div class="param-row">
+                            <div class="param-col">
+                                <div class="param-label">开始日期 (start)</div>
+                                <input id="financials_start" type="date" class="form-control param-input">
+                            </div>
+                            <div class="param-col">
+                                <div class="param-label">结束日期 (end)</div>
+                                <input id="financials_end" type="date" class="form-control param-input">
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-test btn-sm me-2" onclick="testMethod('financials')">测试 financials</button>
+                    <button class="btn btn-test btn-sm me-2" onclick="testMethod('balance_sheet')">测试 balance_sheet</button>
+                    <button class="btn btn-test btn-sm" onclick="testMethod('cashflow')">测试 cashflow</button>
+                    <div id="yf_financials_result" class="mt-2"></div>
+                    <div id="yf_balance_sheet_result" class="mt-2"></div>
+                    <div id="yf_cashflow_result" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">📅 季度财务</h5>
+                    <div class="method-description">季度财务报表数据</div>
+                </div>
+                <div class="card-body">
+                    <div class="param-group">
+                        <div class="param-row">
+                            <div class="param-col">
+                                <div class="param-label">开始日期 (start)</div>
+                                <input id="quarterly_financials_start" type="date" class="form-control param-input">
+                            </div>
+                            <div class="param-col">
+                                <div class="param-label">结束日期 (end)</div>
+                                <input id="quarterly_financials_end" type="date" class="form-control param-input">
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-test btn-sm me-2" onclick="testMethod('quarterly_financials')">测试 quarterly_financials</button>
+                    <button class="btn btn-test btn-sm me-2" onclick="testMethod('quarterly_balance_sheet')">测试 quarterly_balance_sheet</button>
+                    <button class="btn btn-test btn-sm" onclick="testMethod('quarterly_cashflow')">测试 quarterly_cashflow</button>
+                    <div id="yf_quarterly_financials_result" class="mt-2"></div>
+                    <div id="yf_quarterly_balance_sheet_result" class="mt-2"></div>
+                    <div id="yf_quarterly_cashflow_result" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">📈 收益数据</h5>
+                    <div class="method-description">收益报告数据</div>
+                </div>
+                <div class="card-body">
+                    <div class="param-group">
+                        <div class="param-row">
+                            <div class="param-col">
+                                <div class="param-label">开始日期 (start)</div>
+                                <input id="earnings_start" type="date" class="form-control param-input">
+                            </div>
+                            <div class="param-col">
+                                <div class="param-label">结束日期 (end)</div>
+                                <input id="earnings_end" type="date" class="form-control param-input">
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-test btn-sm me-2" onclick="testMethod('earnings')">测试 earnings</button>
+                    <button class="btn btn-test btn-sm" onclick="testMethod('quarterly_earnings')">测试 quarterly_earnings</button>
+                    <div id="yf_earnings_result" class="mt-2"></div>
+                    <div id="yf_quarterly_earnings_result" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">🌱 可持续发展</h5>
+                    <div class="method-description">ESG和可持续发展数据</div>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-test btn-sm" onclick="testMethod('sustainability')">测试 sustainability</button>
+                    <div id="yf_sustainability_result" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">📅 日历信息</h5>
+                    <div class="method-description">收益日期和日历信息</div>
+                </div>
+                <div class="card-body">
+                    <div class="param-group">
+                        <div class="param-row">
+                            <div class="param-col">
+                                <div class="param-label">开始日期 (start)</div>
+                                <input id="calendar_start" type="date" class="form-control param-input">
+                            </div>
+                            <div class="param-col">
+                                <div class="param-label">结束日期 (end)</div>
+                                <input id="calendar_end" type="date" class="form-control param-input">
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-test btn-sm me-2" onclick="testMethod('calendar')">测试 calendar</button>
+                    <button class="btn btn-test btn-sm" onclick="testMethod('get_earnings_dates')">测试 get_earnings_dates</button>
+                    <div id="yf_calendar_result" class="mt-2"></div>
+                    <div id="yf_get_earnings_dates_result" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">🔗 标识信息</h5>
+                    <div class="method-description">ISIN代码和期权信息</div>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-test btn-sm me-2" onclick="testMethod('isin')">测试 isin</button>
+                    <button class="btn btn-test btn-sm" onclick="testMethod('options')">测试 options</button>
+                    <div id="yf_isin_result" class="mt-2"></div>
+                    <div id="yf_options_result" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">👥 股东信息</h5>
+                    <div class="method-description">机构和个人股东数据</div>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-test btn-sm me-2" onclick="testMethod('institutional_holders')">测试 institutional_holders</button>
+                    <button class="btn btn-test btn-sm me-2" onclick="testMethod('mutualfund_holders')">测试 mutualfund_holders</button>
+                    <button class="btn btn-test btn-sm" onclick="testMethod('major_holders')">测试 major_holders</button>
+                    <div id="yf_institutional_holders_result" class="mt-2"></div>
+                    <div id="yf_mutualfund_holders_result" class="mt-2"></div>
+                    <div id="yf_major_holders_result" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">📰 新闻推荐</h5>
+                    <div class="method-description">分析师推荐和新闻</div>
+                </div>
+                <div class="card-body">
+                    <div class="param-group">
+                        <div class="param-row">
+                            <div class="param-col">
+                                <div class="param-label">开始日期 (start)</div>
+                                <input id="recommendations_start" type="date" class="form-control param-input">
+                            </div>
+                            <div class="param-col">
+                                <div class="param-label">结束日期 (end)</div>
+                                <input id="recommendations_end" type="date" class="form-control param-input">
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-test btn-sm me-2" onclick="testMethod('recommendations')">测试 recommendations</button>
+                    <button class="btn btn-test btn-sm" onclick="testMethod('news')">测试 news</button>
+                    <div id="yf_recommendations_result" class="mt-2"></div>
+                    <div id="yf_news_result" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">📊 新财务接口</h5>
+                    <div class="method-description">新版财务报表接口</div>
+                </div>
+                <div class="card-body">
+                    <div class="param-group">
+                        <div class="param-row">
+                            <div class="param-col">
+                                <div class="param-label">开始日期 (start)</div>
+                                <input id="get_income_stmt_start" type="date" class="form-control param-input">
+                            </div>
+                            <div class="param-col">
+                                <div class="param-label">结束日期 (end)</div>
+                                <input id="get_income_stmt_end" type="date" class="form-control param-input">
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-test btn-sm me-2" onclick="testMethod('get_income_stmt')">测试 get_income_stmt</button>
+                    <button class="btn btn-test btn-sm me-2" onclick="testMethod('get_balance_sheet')">测试 get_balance_sheet</button>
+                    <button class="btn btn-test btn-sm" onclick="testMethod('get_cashflow')">测试 get_cashflow</button>
+                    <div id="yf_get_income_stmt_result" class="mt-2"></div>
+                    <div id="yf_get_balance_sheet_result" class="mt-2"></div>
+                    <div id="yf_get_cashflow_result" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const YF_METHODS = [
+    {name:'history', params:['period','interval','start','end','prepost','actions','auto_adjust','back_adjust','repair','keepna','proxy','rounding','timeout','session','progress','show_errors'], description:'历史价格数据'},
+    {name:'info', params:[], description:'基本信息'},
+    {name:'actions', params:['start','end'], description:'公司行为'},
+    {name:'dividends', params:['start','end'], description:'股息数据'},
+    {name:'splits', params:['start','end'], description:'股票分割'},
+    {name:'financials', params:['start','end'], description:'财务报表'},
+    {name:'balance_sheet', params:['start','end'], description:'资产负债表'},
+    {name:'cashflow', params:['start','end'], description:'现金流量表'},
+    {name:'quarterly_financials', params:['start','end'], description:'季度财务报表'},
+    {name:'quarterly_balance_sheet', params:['start','end'], description:'季度资产负债表'},
+    {name:'quarterly_cashflow', params:['start','end'], description:'季度现金流量表'},
+    {name:'earnings', params:['start','end'], description:'收益数据'},
+    {name:'quarterly_earnings', params:['start','end'], description:'季度收益'},
+    {name:'sustainability', params:[], description:'可持续发展'},
+    {name:'calendar', params:['start','end'], description:'日历信息'},
+    {name:'isin', params:[], description:'ISIN代码'},
+    {name:'options', params:[], description:'期权信息'},
+    {name:'institutional_holders', params:[], description:'机构股东'},
+    {name:'mutualfund_holders', params:[], description:'基金股东'},
+    {name:'major_holders', params:[], description:'主要股东'},
+    {name:'recommendations', params:['start','end'], description:'分析师推荐'},
+    {name:'news', params:[], description:'新闻'},
+    {name:'get_income_stmt', params:['start','end'], description:'新版利润表'},
+    {name:'get_balance_sheet', params:['start','end'], description:'新版资产负债表'},
+    {name:'get_cashflow', params:['start','end'], description:'新版现金流量表'},
+    {name:'get_earnings_dates', params:[], description:'收益日期'}
+];
+
+// 字段说明映射
+const FIELD_DESCRIPTIONS = {
+    'Date': '日期',
+    'Open': '开盘价',
+    'High': '最高价',
+    'Low': '最低价',
+    'Close': '收盘价',
+    'Volume': '成交量',
+    'Dividends': '股息',
+    'Stock Splits': '股票分割',
+    'Adj Close': '调整后收盘价',
+    'Market Cap': '市值',
+    'Enterprise Value': '企业价值',
+    'Trailing P/E': '市盈率',
+    'Forward P/E': '预期市盈率',
+    'PEG Ratio': 'PEG比率',
+    'Price/Book': '市净率',
+    'Price/Sales': '市销率',
+    'Enterprise Value/Revenue': '企业价值/营收',
+    'Enterprise Value/EBITDA': '企业价值/EBITDA',
+    'Profit Margins': '利润率',
+    'Operating Margins': '营业利润率',
+    'Return on Assets': '资产回报率',
+    'Return on Equity': '股本回报率',
+    'Revenue': '营收',
+    'Revenue Per Share': '每股营收',
+    'Revenue Growth': '营收增长',
+    'Gross Profits': '毛利润',
+    'Free Cashflow': '自由现金流',
+    'Operating Cash Flow': '经营现金流',
+    'Earnings Growth': '收益增长',
+    'Earnings Quality': '收益质量',
+    'Earnings Before Interest and Taxes': '息税前利润',
+    'Net Income to Common': '普通股净收入',
+    'Total Cash': '总现金',
+    'Total Debt': '总债务',
+    'Debt to Equity': '债务股本比',
+    'Current Ratio': '流动比率',
+    'Book Value': '账面价值',
+    'Cash Per Share': '每股现金',
+    'Dividend Rate': '股息率',
+    'Dividend Yield': '股息收益率',
+    'Payout Ratio': '派息比率',
+    'Five Year Average Dividend Yield': '五年平均股息收益率',
+    'Beta': '贝塔系数',
+    '52 Week Change': '52周变化',
+    'S&P500 52-Week Change': '标普500 52周变化',
+    '52 Week High': '52周最高',
+    '52 Week Low': '52周最低',
+    '50 Day Average': '50日均线',
+    '200 Day Average': '200日均线',
+    'Shares Outstanding': '流通股数',
+    'Float Shares': '流通股',
+    'Shares Short': '空头股数',
+    'Shares Short Prior Month': '上月空头股数',
+    'Short Ratio': '空头比率',
+    'Short Percent of Float': '空头占流通股比例',
+    'Shares Percent Shares Out': '流通股占比',
+    'Held Percent Insiders': '内部持股比例',
+    'Held Percent Institutions': '机构持股比例',
+    'Shares Short Previous Month Date': '上月空头日期',
+    'Forward Annual Dividend Rate': '预期年股息率',
+    'Forward Annual Dividend Yield': '预期年股息收益率',
+    'Trailing Annual Dividend Rate': '历史年股息率',
+    'Trailing Annual Dividend Yield': '历史年股息收益率',
+    'Average Volume': '平均成交量',
+    'Average Volume 10 Days': '10日平均成交量',
+    'Average Volume 30 Days': '30日平均成交量',
+    'Day Range': '日内波动范围',
+    'Day Low': '日内最低',
+    'Day High': '日内最高',
+    'Previous Close': '前收盘价',
+    'Regular Market Open': '常规市场开盘价',
+    'Regular Market Day High': '常规市场日内最高',
+    'Regular Market Day Low': '常规市场日内最低',
+    'Regular Market Previous Close': '常规市场前收盘价',
+    'Regular Market Price': '常规市场价格',
+    'Regular Market Volume': '常规市场成交量',
+    'Regular Market Time': '常规市场时间',
+    'Exchange': '交易所',
+    'Currency': '货币',
+    'Quote Type': '报价类型',
+    'Symbol': '股票代码',
+    'Underlying Symbol': '基础股票代码',
+    'Short Name': '简称',
+    'Long Name': '全称',
+    'Full Exchange Name': '完整交易所名称',
+    'Financial Currency': '财务货币',
+    'Average Analyst Rating': '分析师平均评级',
+    'Number of Analysts': '分析师数量',
+    'Target Mean Price': '目标平均价格',
+    'Target Median Price': '目标中位数价格',
+    'Target High Price': '目标最高价格',
+    'Target Low Price': '目标最低价格',
+    'Recommendation': '推荐',
+    'Recommendation Mean': '推荐平均值',
+    'Number of Recommendations': '推荐数量',
+    'Strong Buy': '强烈买入',
+    'Buy': '买入',
+    'Hold': '持有',
+    'Sell': '卖出',
+    'Strong Sell': '强烈卖出',
+    'From Grade': '评级来源',
+    'To Grade': '评级目标',
+    'Action': '行动',
+    'Firm': '机构',
+    'Date': '日期',
+    'Title': '标题',
+    'Link': '链接',
+    'Provider': '提供者',
+    'Type': '类型',
+    'Related Symbols': '相关股票',
+    'Summary': '摘要',
+    'Publish Time': '发布时间',
+    'Provider Publish Time': '提供者发布时间',
+    'Age': '年龄',
+    'Uuid': '唯一标识',
+    'Spark': '火花图',
+    'Spark Chart': '火花图',
+    'Spark Chart Previous Close': '火花图前收盘价',
+    'Spark Chart Symbol': '火花图股票代码',
+    'Spark Chart End': '火花图结束',
+    'Spark Chart Start': '火花图开始',
+    'Spark Chart Timestamp': '火花图时间戳',
+    'Spark Chart Data': '火花图数据',
+    'Spark Chart Symbol': '火花图股票代码',
+    'Spark Chart Previous Close': '火花图前收盘价',
+    'Spark Chart End': '火花图结束',
+    'Spark Chart Start': '火花图开始',
+    'Spark Chart Timestamp': '火花图时间戳',
+    'Spark Chart Data': '火花图数据'
+};
+
+function getParamValue(methodName, paramName) {
+    const elementId = `${methodName}_${paramName}`;
+    const element = document.getElementById(elementId);
+    if (!element) return null;
+    
+    if (element.type === 'checkbox') {
+        return element.checked;
+    } else if (element.type === 'date') {
+        return element.value || null;
+    } else {
+        return element.value || null;
+    }
+}
+
+function analyzeData(data, methodName) {
+    if (!data || data.length === 0) return null;
+    
+    const analysis = {
+        totalRecords: data.length,
+        fields: [],
+        numericFields: [],
+        dateFields: [],
+        sampleData: data.slice(0, 3)
+    };
+    
+    if (data.length > 0) {
+        const firstRecord = data[0];
+        analysis.fields = Object.keys(firstRecord);
+        
+        analysis.fields.forEach(field => {
+            const value = firstRecord[field];
+            if (typeof value === 'number' || !isNaN(parseFloat(value))) {
+                analysis.numericFields.push(field);
+            } else if (field.toLowerCase().includes('date') || 
+                      (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}/))) {
+                analysis.dateFields.push(field);
+            }
+        });
+    }
+    
+    return analysis;
+}
+
+function formatValue(value, fieldName) {
+    if (value === null || value === undefined || value === '') {
+        return '-';
+    }
+    
+    // 日期格式化
+    if (fieldName.toLowerCase().includes('date') || 
+        (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}/))) {
+        return `<span class="date-cell">${value}</span>`;
+    }
+    
+    // 数字格式化
+    if (typeof value === 'number' || !isNaN(parseFloat(value))) {
+        const num = parseFloat(value);
+        if (fieldName.toLowerCase().includes('price') || fieldName.toLowerCase().includes('close') || 
+            fieldName.toLowerCase().includes('open') || fieldName.toLowerCase().includes('high') || 
+            fieldName.toLowerCase().includes('low')) {
+            return `<span class="numeric-cell">$${num.toFixed(2)}</span>`;
+        } else if (fieldName.toLowerCase().includes('volume')) {
+            return `<span class="numeric-cell">${num.toLocaleString()}</span>`;
+        } else if (fieldName.toLowerCase().includes('percent') || fieldName.toLowerCase().includes('ratio')) {
+            return `<span class="numeric-cell">${num.toFixed(2)}%</span>`;
+        } else {
+            return `<span class="numeric-cell">${num.toLocaleString()}</span>`;
+        }
+    }
+    
+    return value;
+}
+
+function createDataAnalysisHTML(analysis, methodName) {
+    if (!analysis) return '';
+    
+    let html = '<div class="data-analysis">';
+    html += `<div class="analysis-title">📊 数据解析 (${methodName})</div>`;
+    html += `<div class="analysis-item"><span class="analysis-label">总记录数:</span> <span class="analysis-value">${analysis.totalRecords}</span></div>`;
+    html += `<div class="analysis-item"><span class="analysis-label">字段数量:</span> <span class="analysis-value">${analysis.fields.length}</span></div>`;
+    
+    if (analysis.numericFields.length > 0) {
+        html += `<div class="analysis-item"><span class="analysis-label">数值字段:</span> <span class="analysis-value">${analysis.numericFields.join(', ')}</span></div>`;
+    }
+    
+    if (analysis.dateFields.length > 0) {
+        html += `<div class="analysis-item"><span class="analysis-label">日期字段:</span> <span class="analysis-value">${analysis.dateFields.join(', ')}</span></div>`;
+    }
+    
+    html += '</div>';
+    return html;
+}
+
+function createTableHTML(data, columns, methodName) {
+    if (!data || data.length === 0) return '<span class="error">无数据</span>';
+    
+    const analysis = analyzeData(data, methodName);
+    
+    let html = '';
+    
+    // 添加数据解析
+    html += createDataAnalysisHTML(analysis, methodName);
+    
+    // 添加导出按钮
+    html += `<button class="btn export-btn btn-sm mt-2" onclick="exportToCSV('${methodName}', ${JSON.stringify(data)})">📥 导出CSV</button>`;
+    
+    // 创建标签页
+    html += '<ul class="nav nav-tabs mt-2" role="tablist">';
+    html += '<li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#table_' + methodName + '">表格视图</a></li>';
+    html += '<li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#json_' + methodName + '">JSON视图</a></li>';
+    html += '<li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#fields_' + methodName + '">字段说明</a></li>';
+    html += '</ul>';
+    
+    html += '<div class="tab-content">';
+    
+    // 表格视图
+    html += '<div class="tab-pane fade show active" id="table_' + methodName + '">';
+    html += '<div class="data-preview">';
+    html += '<table class="table table-sm table-dark"><thead><tr>';
+    columns.forEach(col => {
+        const description = FIELD_DESCRIPTIONS[col] || col;
+        html += `<th title="${description}">${col}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+    
+    data.forEach(row => {
+        html += '<tr>';
+        columns.forEach(col => {
+            html += `<td>${formatValue(row[col], col)}</td>`;
+        });
+        html += '</tr>';
+    });
+    
+    html += '</tbody></table>';
+    html += '</div></div>';
+    
+    // JSON视图
+    html += '<div class="tab-pane fade" id="json_' + methodName + '">';
+    html += '<pre class="result-json">' + JSON.stringify(data, null, 2) + '</pre>';
+    html += '</div>';
+    
+    // 字段说明视图
+    html += '<div class="tab-pane fade" id="fields_' + methodName + '">';
+    html += '<div class="field-info">';
+    columns.forEach(col => {
+        const description = FIELD_DESCRIPTIONS[col] || '暂无说明';
+        html += `<div><strong>${col}:</strong> ${description}</div>`;
+    });
+    html += '</div></div>';
+    
+    html += '</div>';
+    
+    return html;
+}
+
+function createInfoHTML(data, methodName) {
+    if (!data || typeof data !== 'object') return '<span class="error">无数据</span>';
+    
+    let html = '';
+    
+    // 添加数据解析
+    html += '<div class="data-analysis">';
+    html += `<div class="analysis-title">📊 基本信息解析 (${methodName})</div>`;
+    html += `<div class="analysis-item"><span class="analysis-label">信息字段数:</span> <span class="analysis-value">${Object.keys(data).length}</span></div>`;
+    html += '</div>';
+    
+    // 添加导出按钮
+    const dataArray = Object.keys(data).map(key => ({字段: key, 值: data[key], 说明: FIELD_DESCRIPTIONS[key] || '暂无说明'}));
+    html += `<button class="btn export-btn btn-sm mt-2" onclick="exportToCSV('${methodName}', ${JSON.stringify(dataArray)})">📥 导出CSV</button>`;
+    
+    // 创建标签页
+    html += '<ul class="nav nav-tabs mt-2" role="tablist">';
+    html += '<li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#info_' + methodName + '">信息视图</a></li>';
+    html += '<li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#json_' + methodName + '">JSON视图</a></li>';
+    html += '<li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#categorized_' + methodName + '">分类视图</a></li>';
+    html += '</ul>';
+    
+    html += '<div class="tab-content">';
+    
+    // 信息视图
+    html += '<div class="tab-pane fade show active" id="info_' + methodName + '">';
+    html += '<div class="data-preview">';
+    html += '<table class="table table-sm table-dark"><thead><tr>';
+    html += '<th>字段</th><th>值</th><th>说明</th>';
+    html += '</tr></thead><tbody>';
+    
+    Object.keys(data).forEach(key => {
+        const value = data[key];
+        const description = FIELD_DESCRIPTIONS[key] || '暂无说明';
+        html += '<tr>';
+        html += `<td><strong>${key}</strong></td>`;
+        html += `<td>${formatInfoValue(value, key)}</td>`;
+        html += `<td class="field-info">${description}</td>`;
+        html += '</tr>';
+    });
+    
+    html += '</tbody></table>';
+    html += '</div></div>';
+    
+    // JSON视图
+    html += '<div class="tab-pane fade" id="json_' + methodName + '">';
+    html += '<pre class="result-json">' + JSON.stringify(data, null, 2) + '</pre>';
+    html += '</div>';
+    
+    // 分类视图
+    html += '<div class="tab-pane fade" id="categorized_' + methodName + '">';
+    html += createCategorizedInfoHTML(data);
+    html += '</div>';
+    
+    html += '</div>';
+    
+    return html;
+}
+
+function formatInfoValue(value, fieldName) {
+    if (value === null || value === undefined || value === '') {
+        return '-';
+    }
+    
+    // 布尔值
+    if (typeof value === 'boolean') {
+        return value ? '<span class="positive">是</span>' : '<span class="negative">否</span>';
+    }
+    
+    // 日期格式化
+    if (fieldName.toLowerCase().includes('date') || fieldName.toLowerCase().includes('time')) {
+        if (typeof value === 'number') {
+            // Unix时间戳
+            const date = new Date(value * 1000);
+            return `<span class="date-cell">${date.toLocaleDateString('zh-CN')}</span>`;
+        } else if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}/)) {
+            return `<span class="date-cell">${value}</span>`;
+        }
+    }
+    
+    // 数字格式化
+    if (typeof value === 'number') {
+        // 价格相关
+        if (fieldName.toLowerCase().includes('price') || 
+            fieldName.toLowerCase().includes('close') || 
+            fieldName.toLowerCase().includes('open') || 
+            fieldName.toLowerCase().includes('high') || 
+            fieldName.toLowerCase().includes('low') ||
+            fieldName.toLowerCase().includes('target')) {
+            return `<span class="numeric-cell">$${value.toFixed(2)}</span>`;
+        }
+        // 市值相关（大数值）
+        else if (fieldName.toLowerCase().includes('cap') || 
+                 fieldName.toLowerCase().includes('value') ||
+                 fieldName.toLowerCase().includes('revenue') ||
+                 fieldName.toLowerCase().includes('profit')) {
+            if (value >= 1e12) {
+                return `<span class="numeric-cell">$${(value / 1e12).toFixed(2)}T</span>`;
+            } else if (value >= 1e9) {
+                return `<span class="numeric-cell">$${(value / 1e9).toFixed(2)}B</span>`;
+            } else if (value >= 1e6) {
+                return `<span class="numeric-cell">$${(value / 1e6).toFixed(2)}M</span>`;
+            } else if (value >= 1e3) {
+                return `<span class="numeric-cell">$${(value / 1e3).toFixed(2)}K</span>`;
+            } else {
+                return `<span class="numeric-cell">$${value.toLocaleString()}</span>`;
+            }
+        }
+        // 成交量
+        else if (fieldName.toLowerCase().includes('volume') || 
+                 fieldName.toLowerCase().includes('shares')) {
+            if (value >= 1e9) {
+                return `<span class="numeric-cell">${(value / 1e9).toFixed(2)}B</span>`;
+            } else if (value >= 1e6) {
+                return `<span class="numeric-cell">${(value / 1e6).toFixed(2)}M</span>`;
+            } else if (value >= 1e3) {
+                return `<span class="numeric-cell">${(value / 1e3).toFixed(2)}K</span>`;
+            } else {
+                return `<span class="numeric-cell">${value.toLocaleString()}</span>`;
+            }
+        }
+        // 百分比
+        else if (fieldName.toLowerCase().includes('margin') || 
+                 fieldName.toLowerCase().includes('ratio') ||
+                 fieldName.toLowerCase().includes('yield') ||
+                 fieldName.toLowerCase().includes('growth') ||
+                 fieldName.toLowerCase().includes('change') ||
+                 fieldName.toLowerCase().includes('percent')) {
+            const percentage = value * 100;
+            const colorClass = percentage > 0 ? 'positive' : (percentage < 0 ? 'negative' : '');
+            return `<span class="numeric-cell ${colorClass}">${percentage.toFixed(2)}%</span>`;
+        }
+        // 倍数（如P/E, P/B等）
+        else if (fieldName.toLowerCase().includes('p/e') || 
+                 fieldName.toLowerCase().includes('p/b') ||
+                 fieldName.toLowerCase().includes('peg') ||
+                 fieldName.toLowerCase().includes('beta')) {
+            return `<span class="numeric-cell">${value.toFixed(2)}x</span>`;
+        }
+        // 普通数字
+        else {
+            return `<span class="numeric-cell">${value.toLocaleString()}</span>`;
+        }
+    }
+    
+    // 字符串处理
+    if (typeof value === 'string') {
+        // URL链接
+        if (value.startsWith('http')) {
+            return `<a href="${value}" target="_blank" style="color: #00d4aa;">${value.substring(0, 50)}...</a>`;
+        }
+        // 长文本截断
+        if (value.length > 100) {
+            return `<span title="${value}">${value.substring(0, 100)}...</span>`;
+        }
+    }
+    
+    return value;
+}
+
+function createCategorizedInfoHTML(data) {
+    const categories = {
+        '基本信息': ['symbol', 'shortName', 'longName', 'sector', 'industry', 'country', 'city', 'website', 'exchange', 'currency', 'quoteType'],
+        '价格信息': ['currentPrice', 'previousClose', 'open', 'dayLow', 'dayHigh', 'regularMarketPrice', 'regularMarketOpen', 'regularMarketDayLow', 'regularMarketDayHigh', 'regularMarketPreviousClose'],
+        '市场数据': ['marketCap', 'enterpriseValue', 'sharesOutstanding', 'floatShares', 'volume', 'averageVolume', 'averageVolume10days'],
+        '估值指标': ['trailingPE', 'forwardPE', 'pegRatio', 'priceToBook', 'priceToSalesTrailing12Months', 'enterpriseToRevenue', 'enterpriseToEbitda'],
+        '财务指标': ['profitMargins', 'operatingMargins', 'returnOnAssets', 'returnOnEquity', 'revenue', 'revenuePerShare', 'totalRevenue', 'grossProfits', 'freeCashflow', 'operatingCashflow'],
+        '股息信息': ['dividendRate', 'dividendYield', 'payoutRatio', 'fiveYearAvgDividendYield', 'trailingAnnualDividendRate', 'trailingAnnualDividendYield'],
+        '技术指标': ['beta', '52WeekChange', 'SandP52WeekChange', 'fiftyTwoWeekHigh', 'fiftyTwoWeekLow', 'fiftyDayAverage', 'twoHundredDayAverage'],
+        '分析师数据': ['recommendationMean', 'recommendationKey', 'numberOfAnalystOpinions', 'targetHighPrice', 'targetLowPrice', 'targetMeanPrice', 'targetMedianPrice']
+    };
+    
+    let html = '<div class="row">';
+    
+    Object.keys(categories).forEach(category => {
+        const fields = categories[category];
+        const categoryData = {};
+        fields.forEach(field => {
+            if (data.hasOwnProperty(field)) {
+                categoryData[field] = data[field];
+            }
+        });
+        
+        if (Object.keys(categoryData).length > 0) {
+            html += '<div class="col-md-6 mb-3">';
+            html += `<div class="card"><div class="card-header"><h6 class="mb-0">${category}</h6></div><div class="card-body">`;
+            html += '<table class="table table-sm table-dark mb-0"><tbody>';
+            
+            Object.keys(categoryData).forEach(key => {
+                const description = FIELD_DESCRIPTIONS[key] || key;
+                html += '<tr>';
+                html += `<td style="width: 40%"><small>${description}</small></td>`;
+                html += `<td>${formatInfoValue(categoryData[key], key)}</td>`;
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table></div></div></div>';
+        }
+    });
+    
+    html += '</div>';
+    return html;
+}
+
+function exportToCSV(methodName, data) {
+    if (!data || data.length === 0) {
+        alert('无数据可导出');
+        return;
+    }
+    
+    const columns = Object.keys(data[0]);
+    let csv = columns.join(',') + '\n';
+    
+    data.forEach(row => {
+        const values = columns.map(col => {
+            const value = row[col];
+            if (value === null || value === undefined) return '';
+            return `"${String(value).replace(/"/g, '""')}"`;
+        });
+        csv += values.join(',') + '\n';
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${methodName}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+async function testMethod(methodName) {
+    const symbol = document.getElementById('symbol').value.trim();
+    const resultDiv = document.getElementById(`yf_${methodName}_result`);
+    
+    if (!symbol) {
+        resultDiv.innerHTML = '<span class="error">请输入股票代码</span>';
+        return;
+    }
+    
+    resultDiv.innerHTML = '<span class="loading">加载中...</span>';
+    
+    try {
+        let url = `/api/yfinance_test?symbol=${encodeURIComponent(symbol)}&method=${methodName}`;
+        
+        // 获取方法对应的参数
+        const method = YF_METHODS.find(m => m.name === methodName);
+        if (method && method.params) {
+            method.params.forEach(param => {
+                const value = getParamValue(methodName, param);
+                if (value !== null && value !== '') {
+                    if (typeof value === 'boolean') {
+                        url += `&${param}=${value}`;
+                    } else {
+                        url += `&${param}=${encodeURIComponent(value)}`;
+                    }
+                }
+            });
+        }
+        
+        const resp = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!resp.ok) {
+            throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+        }
+        
+        const data = await resp.json();
+        
+        if (data.success) {
+            if (Array.isArray(data.data)) {
+                if (data.data.length > 0 && data.columns) {
+                    resultDiv.innerHTML = createTableHTML(data.data, data.columns, methodName);
+                } else {
+                    resultDiv.innerHTML = `<pre class='result-json'>${JSON.stringify(data.data, null, 2)}</pre>`;
+                }
+            } else if (typeof data.data === 'object' && data.data !== null) {
+                // 特殊处理info接口的对象数据
+                if (methodName === 'info') {
+                    resultDiv.innerHTML = createInfoHTML(data.data, methodName);
+                } else {
+                    resultDiv.innerHTML = `<pre class='result-json'>${JSON.stringify(data.data, null, 2)}</pre>`;
+                }
+            } else {
+                resultDiv.innerHTML = `<span class="success">${data.data}</span>`;
+            }
+        } else {
+            resultDiv.innerHTML = `<span class="error">${data.error || '接口错误'}</span>`;
+        }
+    } catch (e) {
+        console.error('请求错误:', e);
+        resultDiv.innerHTML = `<span class="error">请求错误: ${e.message}</span>`;
+    }
+}
+
+async function testAllYF() {
+    const symbol = document.getElementById('symbol').value.trim();
+    if (!symbol) {
+        alert('请输入股票代码');
+        return;
+    }
+    
+    for (const method of YF_METHODS) {
+        await testMethod(method.name);
+        // 添加延迟避免请求过快
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+}
+
+function clearAllResults() {
+    YF_METHODS.forEach(method => {
+        const resultDiv = document.getElementById(`yf_${method.name}_result`);
+        if (resultDiv) {
+            resultDiv.innerHTML = '';
+        }
+    });
+}
+</script>
+</body>
+</html> 
