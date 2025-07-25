@@ -1,0 +1,28 @@
+name: Windows CI
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: windows-latest  # 使用微软官方Windows Runner
+    steps:
+      - uses: actions/checkout@v4
+
+      # 示例：构建.NET项目（或替换成你的编译命令）
+      - name: Build with MSBuild
+        run: msbuild ./YourProject.sln /p:Configuration=Release
+
+      # 运行测试（如NUnit/Pytest）
+      - name: Run Tests
+        run: dotnet test  
+
+      # 打包产物（可选）
+      - name: Zip Artifacts
+        run: |
+          Compress-Archive -Path .\bin\Release\* -DestinationPath build.zip
+      
+      # 上传到工作流（供后续下载）
+      - uses: actions/upload-artifact@v3
+        with:
+          name: build-output
+          path: build.zip
